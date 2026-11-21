@@ -1,9 +1,13 @@
 {
   "mcpServers": {
-    "zendao": {
-      "command": "C:\\nvm4w\\nodejs\\node.exe",
-      "args": ["D:\\lili\\my-project\\zendao-mcp\\dist\\index.js"],
-      "cwd": "D:\\lili\\my-project\\zendao-mcp"
+    "zentao-cli": {
+      "command": "npx",
+      "args": ["-y", "@michael_py001/zendao-mcp", "mcp"],
+      "env": {
+        "ZENTAO_URL": "http://zen.example.com/zentaomax",
+        "ZENTAO_ACCOUNT": "your-account",
+        "ZENTAO_PASSWORD": "your-password"
+      }
     }
   }
 }
