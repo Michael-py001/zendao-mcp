@@ -1,0 +1,87 @@
+{
+  "name": "@michael-py001/zendao-mcp",
+  "version": "1.0.0",
+  "description": "MCP 服务器，用于让 LLM 操作禅道项目管理系统的 API；自带一键安装到多种 AI agent 的 CLI",
+  "main": "dist/index.js",
+  "bin": {
+    "zendao-mcp": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "MCP-SETUP.md",
+    "MCP_TESTING_GUIDE.md",
+    "docs",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "tsc",
+    "cli": "node dist/cli.js",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "verify": "node scripts/verify-mcp.js",
+    "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test:watch": "node --experimental-vm-modules node_modules/jest/bin/jest.js --watch",
+    "test:coverage": "node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage --coverageReporters=text --coverageReporters=html",
+    "test:startup": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=startup",
+    "test:auth": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='auth/'",
+    "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='unit/'",
+    "test:tools": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern='tools/'",
+    "test:errors": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=errors",
+    "test:integration": "node --experimental-vm-modules node_modules/jest/bin/jest.js --testPathPattern=integration",
+    "test:all": "./tests/run-all-tests.sh",
+    "test:clean": "rimraf coverage",
+    "lint": "eslint src/**/*.ts",
+    "lint:fix": "eslint src/**/*.ts --fix",
+    "clean": "rimraf dist",
+    "probe:cli": "node .workbuddy/skills/zentao-cli-parity/scripts/probe-official-cli.mjs",
+    "probe:tools": "node .workbuddy/skills/zentao-cli-parity/scripts/probe-mcp-tools.mjs",
+    "probe:endpoints": "node .workbuddy/skills/zentao-cli-parity/scripts/probe-endpoints.mjs",
+    "probe:official-modules": "node .workbuddy/skills/zentao-cli-parity/scripts/extract-official-modules.mjs",
+    "probe:modules-sdk": "node .workbuddy/skills/zentao-cli-parity/scripts/extract-official-modules.mjs --sdk",
+    "probe:my-work": "node .workbuddy/skills/zentao-cli-parity/scripts/probe-my-work-modes.mjs",
+    "probe:smoke": "node .workbuddy/skills/zentao-cli-parity/scripts/probe-smoke-matrix.mjs",
+    "verify:live": "node .workbuddy/skills/zentao-cli-parity/scripts/verify-tools-live.mjs"
+  },
+  "keywords": [
+    "mcp",
+    "llm",
+    "zendao",
+    "project-management"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Michael-py001/zendao-mcp.git"
+  },
+  "homepage": "https://github.com/Michael-py001/zendao-mcp#readme",
+  "bugs": "https://github.com/Michael-py001/zendao-mcp/issues",
+  "author": "Michael-py001",
+  "license": "ISC",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "axios": "^1.6.0",
+    "dotenv": "^16.3.0",
+    "zentao-api": "^0.7.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/jest": "^29.5.0",
+    "@types/node": "^20.0.0",
+    "@typescript-eslint/eslint-plugin": "^6.0.0",
+    "@typescript-eslint/parser": "^6.0.0",
+    "eslint": "^8.0.0",
+    "jest": "^29.5.0",
+    "js-yaml": "^4.1.0",
+    "prettier": "^3.0.0",
+    "rimraf": "^5.0.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.0",
+    "typescript": "^5.0.0"
+  }
+}

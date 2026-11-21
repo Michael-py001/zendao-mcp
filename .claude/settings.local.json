@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__chrome-mcp__chrome_navigate",
+      "mcp__chrome-mcp__chrome_get_web_content",
+      "mcp__chrome-mcp__chrome_get_interactive_elements",
+      "Bash(curl -s \"https://www.modelscope.cn/mcp?name=%E5%9B%BE%E5%83%8F%E7%90%86%E8%A7%A3&page=1\")",
+      "mcp__chrome-mcp__chrome_keyboard",
+      "mcp__chrome-mcp__chrome_click_element"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

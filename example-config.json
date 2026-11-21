@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "zendao": {
+      "command": "C:\\nvm4w\\nodejs\\node.exe",
+      "args": ["D:\\lili\\my-project\\zendao-mcp\\dist\\index.js"],
+      "cwd": "D:\\lili\\my-project\\zendao-mcp"
+    }
+  }
+}
