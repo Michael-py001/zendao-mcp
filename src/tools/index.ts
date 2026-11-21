@@ -38,6 +38,9 @@ import {
 } from './fillEfforts';
 import { getTask } from './getTask';
 import { listUsers } from './getUsers';
+// 2026-11-21 新增：从官方 zentao-cli 0.5.0 移植（SDK 0.9.3）
+import { zendaoLink } from './link';
+import { readAttachments } from './readAttachments';
 // 2026-09-18 新增（官方全量动作迁移 P0，见 docs/migration-plan-sdk.md）
 import { listSdkModules } from './sdkModules';
 import { getSdkActionHelp } from './sdkHelp';
@@ -478,6 +481,44 @@ const UserListOutputShape = {
   page: z.number(),
   limit: z.number(),
   pageTotal: z.number().optional(),
+};
+
+// ---- 页面链接（SDK 0.9.3 新能力，纯本地、只读、无需 Token）----
+
+const LinkInputShape = {
+  action: z.enum(['create', 'parse']).describe('create 生成页面链接 / parse 解析已有链接'),
+  module: z.string().optional().describe('create 用：页面模块名，如 `bug` / `task` / `story`'),
+  method: z.string().optional().describe('create 用：页面方法名，如 `view` / `browse`'),
+  vars: z
+    .array(z.string())
+    .optional()
+    .describe('create 用：`名称=值` 形式的页面参数，可重复，如 `["bugID=123"]`。路径模式下按顺序使用值'),
+  relative: z.boolean().optional().describe('create 用：返回站内相对路径（默认 false = 完整网址）'),
+  hash: z.string().optional().describe('create 用：锚点'),
+  url: z.string().optional().describe('parse 用：要解析的禅道链接（完整网址或站内相对路径）'),
+};
+
+const LinkOutputShape = {
+  action: z.any(),
+  url: z.any().optional(),
+  link: z.any().optional(),
+};
+
+// ---- 通用附件读取（SDK 0.9.3 提取能力 + 已验证的静态直取通路）----
+
+const ReadAttachmentsInputShape = {
+  fileID: z.number().int().positive().optional().describe('直接给一个文件 ID'),
+  url: z.string().optional().describe('附件/图片链接，从中提取 fileID（兼容路径路由与 GET 路由、绝对/相对地址）'),
+  html: z.string().optional().describe('一段富文本 HTML，按顺序提取里面所有禅道图片引用的 fileID'),
+  download: z.boolean().optional().default(true).describe('是否下载到本地并返回绝对路径（默认 true）'),
+  outputDir: z.string().optional().describe('本地保存目录，默认 `{临时目录}/zendao-attachments/files`'),
+  force: z.boolean().optional().default(false).describe('已存在时是否重新下载，默认 false'),
+};
+
+const ReadAttachmentsOutputShape = {
+  count: z.any(),
+  downloaded: z.any(),
+  files: z.array(z.any()),
 };
 
 // ---------- 通用层（官方全量动作）----------
@@ -1007,6 +1048,66 @@ export function registerAllTools(
         return result;
       } catch (error: any) {
         logger.error('获取 Bug 附件失败', error);
+        throw error;
+      }
+    }
+  );
+
+  // ---------- 页面链接（官方 0.5.0 移植）----------
+
+  server.registerTool(
+    'zendao_link',
+    {
+      title: '生成或解析禅道页面链接',
+      description:
+        '生成禅道对象的网页链接，或把一条禅道链接解析回模块/方法/参数。' +
+        '⚡ 从官方 zentao-cli 0.5.0 移植，基于官方 SDK 0.9.3 的 createLink/parseLink —— ' +
+        '纯本地计算、只读、无需 Token，自动适配站点的 GET / PATH_INFO / PATH_INFO2 路由。' +
+        '典型用法：列表工具只返回数字 ID，用 `action: "create"` 拼出能点开的 URL 给用户；' +
+        '拿到一条禅道 URL 想知道它指向什么，用 `action: "parse"`。' +
+        '例：`{ action: "create", module: "bug", method: "view", vars: ["bugID=123"] }`。' +
+        '⚠️ create 需要 module + method；parse 需要 url。已内置站点越界与目录穿越防护。',
+      inputSchema: LinkInputShape,
+      outputSchema: LinkOutputShape,
+      annotations: annotations(true, false),
+    },
+    async (args) => {
+      logger.info('页面链接', { action: args.action });
+      try {
+        return await zendaoLink(client, args as any);
+      } catch (error: any) {
+        logger.error('页面链接失败', error);
+        throw error;
+      }
+    }
+  );
+
+  // ---------- 通用附件读取（官方 0.5.0 移植）----------
+
+  server.registerTool(
+    'zendao_read_attachment',
+    {
+      title: '读取任意对象的附件（从 URL / HTML / fileID）',
+      description:
+        '从附件链接、富文本 HTML 或文件 ID 解析出禅道附件，默认下载到本地并返回可直接打开的绝对路径。' +
+        '⚡ 借鉴官方 zentao-cli 0.5.0 的新附件能力 —— 用官方 SDK 0.9.3 的提取函数从任意文本里定位 fileID，' +
+        '覆盖需求、任务、评论等**任意对象**的附件，不限 Bug。' +
+        '三种入口可单用也可组合（结果按 fileID 去重）：① `fileID` 直接给数字；' +
+        '② `url` 从 `/index.php?m=file&f=read&fileID=...` 这类链接提取；' +
+        '③ `html` 从含 `<img src="...">` 的富文本里批量提取。' +
+        '⚠️ 走的是本实例已实测的 `data/upload` 静态直取通路（而非官方 max9.0 门槛的 file/read），' +
+        '所以在 max8.2 上也能用。下载后会按魔数校验，避免把登录页 HTML 存成图片。' +
+        '与 `zendao_get_bug_attachments` 的分工：后者给 Bug ID 扫三处、出整条 Bug 的全部截图；本工具给的是「已有 fileID/URL/HTML」时的通用读取。',
+      inputSchema: ReadAttachmentsInputShape,
+      outputSchema: ReadAttachmentsOutputShape,
+      annotations: annotations(true, false),
+    },
+    async (args) => {
+      logger.info('读取附件', { fileID: args.fileID, hasUrl: !!args.url, hasHtml: !!args.html });
+      try {
+        return await readAttachments(client, cache, args as any);
+      } catch (error: any) {
+        logger.error('读取附件失败', error);
         throw error;
       }
     }

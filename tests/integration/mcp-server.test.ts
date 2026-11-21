@@ -38,6 +38,9 @@ const EXPECTED_TOOLS = [
   'zendao_get_task',
   'zendao_list_users',
   'zendao_batch_create_tasks',
+  // 2026-11-21 新增：从官方 zentao-cli 0.5.0 移植（SDK 0.9.3）
+  'zendao_link',
+  'zendao_read_attachment',
 ];
 
 const TEST_TIMEOUT = 30000;
@@ -91,7 +94,7 @@ describe('MCP 服务器集成（真客户端 / 只读）', () => {
     return true;
   };
 
-  it('tools/list 恰好给出保留的 14 个工具，且都带描述', async () => {
+  it('tools/list 恰好给出保留的 16 个工具，且都带描述', async () => {
     if (!ready()) return;
 
     const { tools } = await client!.listTools();
