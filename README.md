@@ -70,6 +70,15 @@ Node.js ≥ 18：`npm install && npm run build`，复制 `.env.example` 为 `.en
 
 改 `ZENTAO_BASE_URL` 即可换站点，同一份构建通用；版本适配在运行时按官方注册表的 `minVersion` 判定，不满足会给人话提示。凭证三源优先级：账号密码 → `ZENTAO_TOKEN` → 官方 CLI 登录态（后者只有 Token、有寿命，不宜长期无人值守）。全部变量见 [`.env.example`](./.env.example)。
 
+## 版本更新
+
+| 版本 | 更新内容 |
+| --- | --- |
+| **1.3.0**（待发布） | 升级 `zentao-api` 至 0.9.3：官方动作 229 → 365、模块 26 → 43；新增 `zendao_link`（页面链接生成/解析）和 `zendao_read_attachment`（从 URL / HTML / fileID 读取任意对象附件），工具总数 16 个 |
+| 1.2.0 | 配置形态改为 `mcp` 子命令 + 凭证明文写入各 agent 的 `env`；`serve` 保留为兼容别名 |
+| 1.1.0 | 安装器支持 82 个 agent（25 个自动写入 + 57 个手工指引），写配置时保留 JSONC 注释与尾随逗号 |
+| 1.0.0 | 首次发布：`init` 一键安装、`mcp` 启动，凭证明文写入 agent 配置 |
+
 ## 文档
 
 - [MCP-SETUP.md](./MCP-SETUP.md) — 接入配置、认证、参数、典型坑与实例行为
