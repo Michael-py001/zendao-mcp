@@ -128,9 +128,7 @@ temp/
 cookies.txt
 
 # Agent-local / internal artifacts (never publish)
-.workbuddy/memory/
-.workbuddy/tmp/
+# .workbuddy 整体为本地私有（含自用的 zentao-cli-parity skill 与探针脚本），不入库
+.workbuddy/
 docs/effort-*
 scripts/sanitize-for-public.mjs
-.workbuddy/skills/zentao-cli-parity/scripts/dump-*
-.workbuddy/skills/zentao-cli-parity/scripts/probe-effort*

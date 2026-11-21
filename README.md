@@ -74,7 +74,8 @@ Node.js ≥ 18：`npm install && npm run build`，复制 `.env.example` 为 `.en
 
 | 版本 | 更新内容 |
 | --- | --- |
-| **1.3.0** | 升级 `zentao-api` 至 0.9.3：官方动作 229 → 365、模块 26 → 43；新增 `zendao_link`（页面链接生成/解析）和 `zendao_read_attachment`（从 URL / HTML / fileID 读取任意对象附件），工具总数 16 个；随包附送 `skills/zendao-mcp/SKILL.md` |
+| **1.3.1** | 随包附送 `skills/zendao-mcp/SKILL.md`（Agent 工具选择、写操作铁律、实例踩坑） |
+| 1.3.0 | 升级 `zentao-api` 至 0.9.3：官方动作 229 → 365、模块 26 → 43；新增 `zendao_link`（页面链接生成/解析）和 `zendao_read_attachment`（从 URL / HTML / fileID 读取任意对象附件），工具总数 16 个 |
 | 1.2.0 | 配置形态改为 `mcp` 子命令 + 凭证明文写入各 agent 的 `env`；`serve` 保留为兼容别名 |
 | 1.1.0 | 安装器支持 82 个 agent（25 个自动写入 + 57 个手工指引），写配置时保留 JSONC 注释与尾随逗号 |
 | 1.0.0 | 首次发布：`init` 一键安装、`mcp` 启动，凭证明文写入 agent 配置 |
