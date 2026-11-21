@@ -48,6 +48,40 @@ npx -y @michael_py001/zendao-mcp doctor             # 检查安装状态
 
 Node.js ≥ 18：`npm install && npm run build`，复制 `.env.example` 为 `.env` 填凭证，`npm run verify` 自检。
 
+## 安装 Skill（可选，推荐）
+
+MCP 工具连上后 agent 能自动发现工具，但**工作流和铁律**（填日志前出清单确认、`dryRun` 不是确认、实例踩坑）需要一份 Skill 才能可靠传递。包里已随附 `skills/zendao-mcp/SKILL.md`。
+
+**方式一：从 npm 包解出**（安装后）
+
+```bash
+# 在任意空目录执行，解出 skill 文件
+npm pack @michael_py001/zendao-mcp          # 得到 tarball
+tar -xzf michael_py001-zendao-mcp-1.3.1.tgz  # Windows 自带 tar 亦可
+# 文件在 package/skills/zendao-mcp/SKILL.md
+```
+
+**方式二：从源码复制**（clone 了仓库时）
+
+```bash
+cp -r skills/zendao-mcp <agent 的 skills 目录>/
+```
+
+**各 agent 的 skills 目录**（复制到此目录下，最终形如 `<目录>/zendao-mcp/SKILL.md`）：
+
+| Agent | 目录 |
+| --- | --- |
+| Claude Code | `~/.claude/skills/` |
+| Cursor | `~/.cursor/skills/` |
+| Codex | `~/.agents/skills/` |
+| OpenCode | `~/.config/opencode/skills/` |
+| Gemini CLI | `~/.gemini/skills/` |
+| Cherry Studio | `~/.cherrystudio/skills/` |
+| VS Code (Copilot) | `~/.copilot/skills/` |
+| Antigravity | `~/.gemini/antigravity/skills/` |
+
+装好后 agent 会在相关任务（操作禅道数据、查我的待办、填工时、读附件）时自动加载它。WorkBuddy 用户把 `SKILL.md` 放进工作区 `.workbuddy/skills/zendao-mcp/` 即可。
+
 ## 能做什么
 
 **通用层（3 个）**：`zendao_modules` 看有哪些动作 → `zendao_help { module, action }` 查参数 → `zendao_call { module, action, params }` 执行。覆盖官方全部 43 模块 / 365 动作，按实例版本自动过滤，不需要编译期适配。
