@@ -3,15 +3,14 @@
 把本项目的 MCP 服务器接进任意支持 MCP 的 AI 客户端（WorkBuddy / Cursor / VS Code / Codex / Claude Desktop…），
 让 AI 能直接读写禅道的项目、执行、任务，以及产品、项目集与 Bug。
 
-- **服务入口**：`dist/index.js`（本机为 `D:\lili\my-project\zendao-mcp\dist\index.js`）
-- **Node 解释器**：本机为 `C:\nvm4w\nodejs\node.exe`
-- **凭证来源**：项目根目录的 `.env`（或环境变量），也可自动复用官方 zentao-cli 的登录态，
-  程序**自动换取** Token
+- **推荐安装**：`npx -y @michael_py001/zendao-mcp init`（自动检测并写入各 agent 配置）
+- **服务入口**：`npx -y @michael_py001/zendao-mcp mcp`（stdio，无需本地 clone 仓库）
+- **凭证来源**：agent 配置里的 `env`：`ZENTAO_URL` / `ZENTAO_ACCOUNT` / `ZENTAO_PASSWORD`
 - **API 版本**：**禅道 API 2.0**（`{站点根}/api.php/v2`）
-- **工具数量**：12 个（**通用层 3**：`modules` / `help` / `call`，覆盖官方 26 模块 × 229 个动作；**手写兜底 9**：Bug 4 + 地盘/任务/人员 5）
+- **工具数量**：14 个（**通用层 3**：`modules` / `help` / `call`，覆盖官方 26 模块 × 229 个动作；**手写兜底 11**：官方给不了的实例特有能力）
 
-> 配置里**不需要**写任何 `ZENTAO_*` 环境变量。服务会从「相对自身位置的项目根」读取 `.env`，
-> 所以无论客户端用什么工作目录拉起它，配置都能正确加载（已实测：从 `C:\Users\ex03344` 启动同样 OK）。
+> ⚠️ 按当前配置方案，凭证以明文写进 agent 配置。请勿把含凭证的配置提交到 git。
+> 从源码手动运行时，服务也会读取 `.env`（`ZENDAO_ENV_FILE` 可显式指定真实凭证文件）。
 
 ---
 
@@ -219,31 +218,32 @@ v1 与 v2 的差异（客户端已自动处理，列出来便于排查）：
 
 ## 三、三步接入
 
-### 第 1 步：构建
+### 第 1 步：一键安装
 
 ```bash
-cd D:\lili\my-project\zendao-mcp
-npm install
-npm run build
+npx -y @michael_py001/zendao-mcp init
 ```
 
-### 第 2 步：配置 `.env`
+自动检测本机已装的 agent → 多选目标 → 填写禅道地址/账号/密码 → 写入各自配置。
+`--list-agents` 可看全部受支持的 agent，`--dry-run` 只看计划不写文件。
 
-```bash
-cp .env.example .env
+### 第 2 步：确认凭证
+
+init 会把这三项写进每个 agent 配置的 `env`：
+
+```json
+{
+  "ZENTAO_URL": "http://zen.example.com/zentaomax",
+  "ZENTAO_ACCOUNT": "你的账号",
+  "ZENTAO_PASSWORD": "你的密码"
+}
 ```
 
-编辑 `.env`，至少填这三项：
+也可以手工填写下一节的片段。密码是明文，注意配置文件的 git 状态。
 
-```env
-ZENTAO_BASE_URL=http://zen.example.com/zentaomax
-ZENTAO_ACCOUNT=你的账号
-ZENTAO_PASSWORD=你的密码
-```
+### 第 3 步：重启客户端
 
-### 第 3 步：写客户端配置
-
-见下一节。写完后**重启客户端**（WorkBuddy 需额外点「信任」）。
+写完后**重启客户端**（WorkBuddy 需额外点「信任」）。用 `doctor` 检查配置是否齐全。
 
 ---
 
@@ -256,10 +256,14 @@ ZENTAO_PASSWORD=你的密码
 ```json
 {
   "mcpServers": {
-    "zendao": {
-      "command": "C:\\nvm4w\\nodejs\\node.exe",
-      "args": ["D:\\lili\\my-project\\zendao-mcp\\dist\\index.js"],
-      "cwd": "D:\\lili\\my-project\\zendao-mcp"
+    "zentao-cli": {
+      "command": "npx",
+      "args": ["-y", "@michael_py001/zendao-mcp", "mcp"],
+      "env": {
+        "ZENTAO_URL": "http://zen.example.com/zentaomax",
+        "ZENTAO_ACCOUNT": "你的账号",
+        "ZENTAO_PASSWORD": "你的密码"
+      }
     }
   }
 }
@@ -272,11 +276,15 @@ ZENTAO_PASSWORD=你的密码
 ```json
 {
   "servers": {
-    "zendao": {
+    "zentao-cli": {
       "type": "stdio",
-      "command": "C:\\nvm4w\\nodejs\\node.exe",
-      "args": ["D:\\lili\\my-project\\zendao-mcp\\dist\\index.js"],
-      "cwd": "D:\\lili\\my-project\\zendao-mcp"
+      "command": "npx",
+      "args": ["-y", "@michael_py001/zendao-mcp", "mcp"],
+      "env": {
+        "ZENTAO_URL": "http://zen.example.com/zentaomax",
+        "ZENTAO_ACCOUNT": "你的账号",
+        "ZENTAO_PASSWORD": "你的密码"
+      }
     }
   }
 }
@@ -287,15 +295,13 @@ ZENTAO_PASSWORD=你的密码
 追加到 `~/.codex/config.toml` 的**文件末尾**：
 
 ```toml
-[mcp_servers.zendao]
-type = "stdio"
-command = 'C:\nvm4w\nodejs\node.exe'
-args = ['D:\lili\my-project\zendao-mcp\dist\index.js']
-enabled = true
+[mcp_servers.zentao-cli]
+command = "npx"
+args = ["-y", "@michael_py001/zendao-mcp", "mcp"]
+env = { ZENTAO_URL = "http://zen.example.com/zentaomax", ZENTAO_ACCOUNT = "你的账号", ZENTAO_PASSWORD = "你的密码" }
 ```
 
-> ⚠️ 必须追加到真正的文件末尾。若插到别的表（如 `[mcp_servers.node_repl.env]`）中间，
-> 后面的键会被**错误地吞进** `[mcp_servers.zendao]` 里，弄坏原有配置。
+> ⚠️ 必须追加到真正的文件末尾。若插到别的表中间，后面的键会被**错误地吞进**这个段落里，弄坏原有配置。
 
 ### 其他客户端
 
@@ -787,7 +793,6 @@ HTTP 200 + `status:"fail"`**，如果按「响应不成功就重试覆盖」来�
 ### 方式 1：跑内置探针（最推荐）
 
 ```bash
-cd D:\lili\my-project\zendao-mcp
 npm run verify
 ```
 
@@ -838,7 +843,7 @@ npx @modelcontextprotocol/inspector node dist/index.js
 | 接口 404 | API 版本不匹配或路径写错 | 确认 `ZENTAO_API_VERSION`（默认 v2）；提示信息里会带出版本与路径 |
 | `spawn node ENOENT` | 客户端拿不到 `PATH` | `command` 改绝对路径 `C:\nvm4w\nodejs\node.exe` |
 | 客户端里看不到工具 | 未信任 / 未重启 / 键名写错 | WorkBuddy 点「信任」；VS Code 键名是 `servers` |
-| Codex 里原有服务器的配置坏了 | `[mcp_servers.zendao]` 被插到了别的表中间 | 移到文件末尾，用 `python -c "import tomllib;tomllib.load(open(...,'rb'))"` 验证 |
+| Codex 里原有服务器的配置坏了 | `[mcp_servers.zentao-cli]` 被插到了别的表中间 | 移到文件末尾，用 `python -c "import tomllib;tomllib.load(open(...,'rb'))"` 验证 |
 | 客户端报 JSON 解析错误 | stdout 被日志污染 | 本项目日志已全部走 stderr；若出现说明有人把日志改回了 `console.log` |
 | 提示「缺 executionID」 | 任务的归属方没给 | 先 `zendao_call { module: "execution", action: "list" }`（可按 `projectID` 过滤）拿 id |
 | 任务查询返回空但明明有数据 | 服务端口径 / 本地兜底过滤生效 | 显式带上 `browseType`，或去掉过滤条件再试 |

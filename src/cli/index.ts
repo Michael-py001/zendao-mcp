@@ -13,7 +13,7 @@ const HELP = (version: string) => `zendao-mcp ${version}
 用法:
   npx -y @michael_py001/zendao-mcp init    交互式安装到本机 AI agent
   npx -y @michael_py001/zendao-mcp doctor  检查安装状态
-  npx -y @michael_py001/zendao-mcp serve   启动 MCP 服务（agent 配置里用的就是这条）
+  npx -y @michael_py001/zendao-mcp mcp     启动 MCP 服务（agent 配置里用的就是这条）
 
 init --help 查看安装选项。
 `;
@@ -34,7 +34,8 @@ function parseScope(args: string[]): Scope {
 export async function run(argv: string[]): Promise<number> {
   const [command, ...rest] = argv;
 
-  if (!command || command === 'serve' || command === 'start') {
+  // serve / start 是兼容别名；mcp 是写进 agent 配置的标准入口
+  if (!command || command === 'mcp' || command === 'serve' || command === 'start') {
     await import('../index.js');
     return 0;
   }

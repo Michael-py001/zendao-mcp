@@ -325,14 +325,11 @@ npm run probe:modules-sdk -- --out=.workbuddy/tmp/official-modules-sdk.json
 直读 `zentao-api` 的 `exportRegistry()` —— 与运行时**同一份注册表**（含 SDK 内置 `override.js` 补丁），
 还额外带 `method` / `path` / `type`（**markdown 里没有这三样**）。
 
-**交叉验证 —— md 模式（需 clone 官方仓库）**：
+**交叉验证 —— md 模式（需自行提供命令参考文件）**：
 
 ```powershell
-# 仓库只 clone 源码即可，不需要 npm install（模块定义来自外部 zentao-api SDK，本地没有）
-git clone https://github.com/easysoft/zentao-cli D:/lili/other-projects/zentao-cli
-
 npm run probe:official-modules -- `
-  D:/lili/other-projects/zentao-cli/docs/command-reference.md `
+  <命令参考文件.md> `
   .workbuddy/tmp/official-modules-md.json `
   --compare=.workbuddy/tmp/official-modules-sdk.json
 ```

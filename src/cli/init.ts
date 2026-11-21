@@ -145,9 +145,18 @@ export async function runInit(options: InitOptions): Promise<number> {
 
   const credentials = await collectCredentials(options.dryRun);
   const credFile = credentialsPath();
+  const serverEnv = {
+    ZENTAO_URL: credentials.baseUrl,
+    ZENTAO_ACCOUNT: credentials.account,
+    ZENTAO_PASSWORD: credentials.password,
+  };
 
   process.stdout.write('\n安装计划:\n');
-  process.stdout.write(`  凭证: ${credFile}（权限 600，不写进 agent 配置）\n`);
+  process.stdout.write(
+    '  凭证: ZENTAO_URL / ZENTAO_ACCOUNT / ZENTAO_PASSWORD 直接写进各 agent 配置的 env\n'
+  );
+  process.stdout.write(`  同时缓存到 ${credFile}（权限 600）供下次复用\n`);
+  process.stdout.write('  ⚠️ agent 配置里是明文密码，别把这些文件提交到 git\n');
   for (const agent of selected) {
     if (!('configPath' in agent)) {
       process.stdout.write(`  ${agent.name}: 手工配置（不会写文件）\n`);
@@ -178,7 +187,7 @@ export async function runInit(options: InitOptions): Promise<number> {
   }
 
   const outcomes: WriteOutcome[] = selected.map((agent) =>
-    writeAgentConfig(agent, options.scope, options.cwd, options.dryRun)
+    writeAgentConfig(agent, options.scope, options.cwd, options.dryRun, serverEnv)
   );
 
   process.stdout.write('\n结果:\n');

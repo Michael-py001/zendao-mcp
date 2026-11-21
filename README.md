@@ -24,11 +24,29 @@ npx -y @michael_py001/zendao-mcp init
 1. 按配置文件自动检测本机已装的 agent；
 2. 空格多选目标 agent（`a` 全选、`u` 全清、↑↓ 移动），再选用户级 / 项目级；
 3. 交互式填写禅道站点地址、账号、密码（密码不回显）；
-4. 汇总确认后，凭证写入 `~/.zendao-mcp/.env`（权限 600），各 agent 配置只新增一个 `zendao` 条目。
+4. 汇总确认后，各 agent 配置新增一个 `zentao-cli` 条目，凭证直接写进该条目的 `env`：
 
-**凭证不会写进 agent 配置文件** —— 那些文件常被提交到 git，也可能被别的工具读取。
+```json
+{
+  "mcpServers": {
+    "zentao-cli": {
+      "command": "npx",
+      "args": ["-y", "@michael_py001/zendao-mcp", "mcp"],
+      "env": {
+        "ZENTAO_URL": "http://zen.example.com/zentaomax",
+        "ZENTAO_ACCOUNT": "your-account",
+        "ZENTAO_PASSWORD": "your-password"
+      }
+    }
+  }
+}
+```
+
+⚠️ **凭证是明文写进 agent 配置的**，字段名与官方 CLI 一致，方便复制粘贴；
+这些文件常被提交到 git，请确认自己没有把含密码的配置加进仓库。
+安装器同时把凭证缓存在 `~/.zendao-mcp/.env`（权限 600）作为下次复用的默认值。
 写入前自动备份、同目录原子替换；用 `jsonc-parser` 定点插入，Trae / CodeBuddy / Cline 常见的
-JSONC 注释与尾随逗号会原样保留，只损坏到真正非法的配置文件才会报错退出。
+JSONC 注释与尾随逗号会原样保留，只遇到真正非法的配置文件才报错退出。
 
 **可自动写入配置的 25 个 agent**：WorkBuddy、Claude Code、Claude Desktop、Cursor、Codex CLI、
 OpenCode、Gemini CLI、VS Code / Copilot、Windsurf、Cline、Roo Code、Kilo Code、Zed、
@@ -51,11 +69,14 @@ npx -y @michael_py001/zendao-mcp init --dry-run               # 只看计划，�
 npx -y @michael_py001/zendao-mcp doctor                       # 检查安装状态
 ```
 
-写入 agent 配置的启动命令是 `npx -y @michael_py001/zendao-mcp serve`。
+写入 agent 配置的启动命令是 `npx -y @michael_py001/zendao-mcp mcp`（`serve` 保留为兼容别名）。
 各宿主的根键不同（`mcpServers` / `servers` / `mcp` / `context_servers` / TOML），安装器会自动选。
 WorkBuddy 额外需要在连接器中心右上角点「信任」才会加载自定义 MCP。
 
-本地开发（未发布时）用 `npm run build && node dist/cli.js init`，效果相同。
+从源码开发时用 `npm run build && node dist/cli.js init`，效果相同。
+
+> 从 1.1.x 升级：配置条目名由 `zendao` 改为 `zentao-cli`，启动参数由 `serve` 改为 `mcp`，
+> 并新增 `env` 凭证。重新跑一次 `init` 即可写入新条目；旧的 `zendao` 条目可在 agent 设置里删除。
 
 ---
 

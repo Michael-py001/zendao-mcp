@@ -20,9 +20,21 @@ import * as path from 'path';
 /** 发布到 npm 的包名，也是写进各 agent 配置的入口 */
 export const PACKAGE_NAME = '@michael_py001/zendao-mcp';
 /** 在各 agent 配置里注册的名字 */
-export const SERVER_NAME = 'zendao';
+export const SERVER_NAME = 'zentao-cli';
+/** MCP 子命令（serve 仍保留为兼容别名） */
+export const MCP_COMMAND = 'mcp';
 /** 手工配置时给用户复制的启动命令 */
-export const START_COMMAND = `npx -y ${PACKAGE_NAME} serve`;
+export const START_COMMAND = `npx -y ${PACKAGE_NAME} ${MCP_COMMAND}`;
+
+/** env 里必须齐备的三个凭证字段 */
+export const SERVER_ENV_KEYS = ['ZENTAO_URL', 'ZENTAO_ACCOUNT', 'ZENTAO_PASSWORD'] as const;
+
+/** 写进 agent 配置 env 的凭证（与官方 zentao-cli 的字段名保持一致） */
+export interface ServerEnv {
+  ZENTAO_URL: string;
+  ZENTAO_ACCOUNT: string;
+  ZENTAO_PASSWORD: string;
+}
 
 export type Scope = 'global' | 'project';
 /** 三种 JSON 根键（mcpServers / servers / context_servers）＋ Codex 的 TOML */
@@ -161,7 +173,7 @@ export const AGENTS: AgentDef[] = [
     scopes: ['global'],
     configPath: () => path.join(process.env.CODEX_HOME || path.join(home(), '.codex'), 'config.toml'),
     detect: () => [path.join(process.env.CODEX_HOME || path.join(home(), '.codex'), 'config.toml')],
-    note: 'Codex 配置是 TOML：[mcp_servers.zendao]；项目级配置只对已信任目录生效，故只装用户级',
+    note: 'Codex 配置是 TOML：[mcp_servers.zentao-cli]；项目级配置只对已信任目录生效，故只装用户级',
   },
   {
     id: 'opencode',
@@ -453,17 +465,21 @@ export function rootKey(format: ConfigFormat): string {
 }
 
 /** 写进 agent 配置的服务器条目，不含任何凭证 */
-export function serverEntry(format: ConfigFormat, extra?: Record<string, unknown>): Record<string, unknown> {
+export function serverEntry(
+  format: ConfigFormat,
+  extra?: Record<string, unknown>,
+  env?: Record<string, unknown>
+): Record<string, unknown> {
   const command = 'npx';
-  const args = ['-y', PACKAGE_NAME, 'serve'];
-  const base =
+  const args = ['-y', PACKAGE_NAME, MCP_COMMAND];
+  const base: Record<string, unknown> =
     format === 'servers'
       ? { type: 'stdio', command, args }
       : format === 'mcp'
         ? { type: 'local', command: [command, ...args], enabled: true }
-        : format === 'contextServers'
-          ? { command, args, env: {} }
-          : { command, args };
+        : { command, args };
+  // Zed 原本要求 env:{}，有凭证时直接填进去；其他宿主没有 env 键就不写空对象
+  if (env || format === 'contextServers') base.env = env || {};
   return extra ? { ...base, ...extra } : base;
 }
 
@@ -478,5 +494,5 @@ export function detectInstalled(cwd: string, scope: Scope): AgentDef[] {
 
 /** 手工类 agent 的启动指引 */
 export function manualInstruction(name: string): string {
-  return `${name} 未公开可靠的 MCP 配置格式，请在该 agent 的 MCP 设置里手工添加 stdio 服务器：${START_COMMAND}（命令 npx，参数 -y ${PACKAGE_NAME} serve）`;
+  return `${name} 未公开可靠的 MCP 配置格式，请在该 agent 的 MCP 设置里手工添加 stdio 服务器：${START_COMMAND}，并在 env 里填 ZENTAO_URL / ZENTAO_ACCOUNT / ZENTAO_PASSWORD`;
 }

@@ -270,18 +270,16 @@ npm run verify:live            # 真机验收：工具调用 + outputSchema 校�
 # 推荐：SDK 内省，不需要官方仓库
 npm run probe:modules-sdk -- --out=.workbuddy/tmp/official-modules-sdk.json
 
-# 交叉验证：md 模式与 sdk 模式比对
+# 交叉验证：md 模式与 sdk 模式比对（需自行提供命令参考文件）
 npm run probe:official-modules -- \
-  D:/lili/other-projects/zentao-cli/docs/command-reference.md \
+  <命令参考文件.md> \
   .workbuddy/tmp/official-modules-md.json \
   --compare=.workbuddy/tmp/official-modules-sdk.json
 ```
 
 ### 前置（仅 `md` 模式需要）
 
-```bash
-git clone https://github.com/easysoft/zentao-cli D:/lili/other-projects/zentao-cli
-```
+自行准备一份命令参考文件，其余模式不需要任何额外仓库。
 
 ### 怎么读结果
 

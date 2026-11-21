@@ -41,6 +41,7 @@ describe('注册表完整性', () => {
     expect(autoIds.filter((id) => manualIds.includes(id))).toEqual([]);
     expect(AGENTS.length).toBeGreaterThanOrEqual(25);
     expect(MANUAL_AGENTS.length).toBeGreaterThanOrEqual(50);
+    expect(SERVER_NAME).toBe('zentao-cli');
   });
 
   it('每种格式都能算出根键，所有配置路径可计算', () => {
@@ -66,7 +67,7 @@ describe('新格式与扩展字段', () => {
 
     const data = JSON.parse(fs.readFileSync(outcome.path, 'utf8'));
     expect(data.mcpServers).toBeUndefined();
-    expect(data.context_servers[SERVER_NAME].args).toEqual(['-y', PACKAGE_NAME, 'serve']);
+    expect(data.context_servers[SERVER_NAME].args).toEqual(['-y', PACKAGE_NAME, 'mcp']);
     expect(hasEntry(agent, 'global', dir)).toBe(true);
   });
 
@@ -103,7 +104,8 @@ describe('手工配置 agent', () => {
     const target = MANUAL_AGENTS.find((a) => a.id === 'goose')!;
     const outcome = writeAgentConfig(target, 'global', dir, false);
     expect(outcome.status).toBe('manual');
-    expect(outcome.detail).toContain(`npx -y ${PACKAGE_NAME} serve`);
+    expect(outcome.detail).toContain(`npx -y ${PACKAGE_NAME} mcp`);
+    expect(outcome.detail).toContain('ZENTAO_PASSWORD');
     expect(fs.readdirSync(dir)).toHaveLength(0);
   });
 });

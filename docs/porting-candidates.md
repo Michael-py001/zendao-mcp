@@ -297,7 +297,7 @@ npm run probe:cli -- --modules=ALL --out=./official.md
 # ⭐ 推荐：SDK 内省，不需要 clone 官方仓库（P2-17）
 npm run probe:modules-sdk -- --out=.workbuddy/tmp/official-modules-sdk.json
 # md 模式仍可用（需先 clone 官方仓库），并可与 sdk 结果交叉验证：
-# npm run probe:official-modules -- D:/lili/other-projects/zentao-cli/docs/command-reference.md \
+# npm run probe:official-modules -- <命令参考文件.md> \
 #   .workbuddy/tmp/official-modules-md.json --compare=.workbuddy/tmp/official-modules-sdk.json
 
 # 本实例 REST 端点可达性矩阵（62 探测点 / 37 有路 / 25 个 404）

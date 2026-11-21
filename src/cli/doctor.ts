@@ -3,7 +3,7 @@
  */
 
 import { AGENTS, Scope, detectInstalled } from './agents';
-import { hasEntry } from './config-writer';
+import { hasCompleteEnv, hasEntry } from './config-writer';
 import { credentialsPath, loadCredentials } from './credentials';
 
 export interface DoctorOptions {
@@ -34,7 +34,12 @@ export function runDoctor(options: DoctorOptions): number {
     if (installed) configured++;
     // 只显示已配置的，或本机确实装了的 agent —— 25 个全列出来噪音太大
     if (!installed && !detected.includes(agent)) continue;
-    process.stdout.write(`${agent.name}: ${installed ? `已配置 (${file})` : `未配置 (${file})`}\n`);
+    const state = !installed
+      ? '未配置'
+      : hasCompleteEnv(agent, options.scope, options.cwd)
+        ? '已配置，凭证齐全'
+        : '已配置，但 env 缺少 ZENTAO_*';
+    process.stdout.write(`${agent.name}: ${state} (${file})\n`);
   }
   process.stdout.write(`检查了 ${candidates.length} 个 agent，已配置 ${configured} 个。\n`);
   return 0;

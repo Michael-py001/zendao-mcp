@@ -22,6 +22,7 @@ import {
   ConfigFormat,
   ManualAgent,
   Scope,
+  SERVER_ENV_KEYS,
   SERVER_NAME,
   configFormat,
   manualInstruction,
@@ -118,6 +119,10 @@ function writeJson(
  * Codex 是 TOML，顶层表叫 [mcp_servers]，不是 mcpServers。
  * 只做「整段替换 / 末尾追加」，不引入 TOML 解析器 —— 我们只写一个固定条目。
  */
+function tomlSectionRe(): RegExp {
+  return new RegExp(`^\\[mcp_servers\\.${SERVER_NAME.replace(/-/g, '\\-')}\\]\\s*$`, 'm');
+}
+
 function writeToml(
   filePath: string,
   entry: Record<string, unknown>,
@@ -126,14 +131,21 @@ function writeToml(
   const text = readText(filePath) ?? '';
   const command = String(entry.command);
   const args = Array.isArray(entry.args) ? entry.args : [];
+  const env = entry.env && typeof entry.env === 'object' ? (entry.env as Record<string, unknown>) : undefined;
+  const envLine = env
+    ? `env = { ${Object.entries(env)
+        .map(([key, value]) => `${key} = ${JSON.stringify(String(value))}`)
+        .join(', ')} }`
+    : '';
   const block = [
     `[mcp_servers.${SERVER_NAME}]`,
     `command = ${JSON.stringify(command)}`,
     `args = [${args.map((a) => JSON.stringify(String(a))).join(', ')}]`,
+    ...(envLine ? [envLine] : []),
     '',
   ].join('\n');
 
-  const start = text.search(/^\[mcp_servers\.zendao\]\s*$/m);
+  const start = text.search(tomlSectionRe());
   let next: string;
   if (start >= 0) {
     const after = text.slice(start).split('\n').slice(1);
@@ -155,10 +167,24 @@ export function hasEntry(agent: AgentDef, scope: Scope, cwd: string): boolean {
   const text = readText(filePath);
   if (text === null) return false;
   const format: ConfigFormat = configFormat(agent);
-  if (format === 'toml') return /^\[mcp_servers\.zendao\]\s*$/m.test(text);
+  if (format === 'toml') return tomlSectionRe().test(text);
   const data = parseJson(text, filePath);
   const root = data[rootKey(format)];
   return !!(root && typeof root === 'object' && root[SERVER_NAME]);
+}
+
+/** 条目在，但 env 三件套缺一不可 —— doctor 用 */
+export function hasCompleteEnv(agent: AgentDef, scope: Scope, cwd: string): boolean {
+  const filePath = agent.configPath(scope, cwd);
+  const text = readText(filePath);
+  if (text === null) return false;
+  if (configFormat(agent) === 'toml') {
+    return SERVER_ENV_KEYS.every((key) => new RegExp(`\\b${key}\\s*=`).test(text));
+  }
+  const data = parseJson(text, filePath);
+  const entry = data[rootKey(configFormat(agent))]?.[SERVER_NAME];
+  const env = entry?.env;
+  return !!env && SERVER_ENV_KEYS.every((key) => !!env[key]);
 }
 
 /**
@@ -169,7 +195,8 @@ export function writeAgentConfig(
   agent: AgentDef | ManualAgent,
   scope: Scope,
   cwd: string,
-  dryRun: boolean
+  dryRun: boolean,
+  env?: Record<string, unknown>
 ): WriteOutcome {
   if (!('configPath' in agent)) {
     return {
@@ -183,7 +210,7 @@ export function writeAgentConfig(
   const filePath = agent.configPath(scope, cwd);
   try {
     const format = configFormat(agent);
-    const entry = serverEntry(format, agent.entryExtra);
+    const entry = serverEntry(format, agent.entryExtra, env);
     const status =
       format === 'toml'
         ? writeToml(filePath, entry, dryRun)
