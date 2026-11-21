@@ -15,6 +15,7 @@ import {
   SERVER_NAME,
 } from './agents';
 import { hasEntry, writeAgentConfig, WriteOutcome } from './config-writer';
+import { hasSkillTarget, installSkill, SkillOutcome } from './skill-installer';
 import { Credentials, credentialsPath, loadCredentials, saveCredentials } from './credentials';
 import { askSecret, askText, confirm, selectMany } from './prompt';
 
@@ -171,8 +172,9 @@ export async function runInit(options: InitOptions): Promise<number> {
       // 单个配置文件坏了不能中断整批安装；真正写入时该 agent 会记为 failed
       planError = `（读取失败：${error.message}）`;
     }
+    const skillNote = hasSkillTarget(agent.id) ? ' + Skill' : '';
     process.stdout.write(
-      `  ${agent.name}: ${file}${exists ? '（已存在，将更新）' : ''}${planError}\n`
+      `  ${agent.name}: ${file}${exists ? '（已存在，将更新）' : ''}${planError}${skillNote}\n`
     );
   }
 
@@ -190,6 +192,11 @@ export async function runInit(options: InitOptions): Promise<number> {
     writeAgentConfig(agent, options.scope, options.cwd, options.dryRun, serverEnv)
   );
 
+  // Skill 随 init 一起装到各 agent 的 skills 目录（可选增强，失败不阻断主配置）
+  const skillOutcomes: SkillOutcome[] = selected
+    .filter((a): a is AgentDef => 'configPath' in a && hasSkillTarget(a.id))
+    .map((agent) => installSkill(agent.id, agent.name, options.scope, options.cwd, options.dryRun));
+
   process.stdout.write('\n结果:\n');
   for (const outcome of outcomes) {
     const label =
@@ -199,6 +206,18 @@ export async function runInit(options: InitOptions): Promise<number> {
           ? `手工配置: ${outcome.detail}`
           : outcome.status;
     process.stdout.write(`  ${outcome.agent}: ${label}\n`);
+  }
+  if (skillOutcomes.length) {
+    process.stdout.write('\nSkill:\n');
+    for (const outcome of skillOutcomes) {
+      const label =
+        outcome.status === 'failed'
+          ? `失败: ${outcome.detail}`
+          : outcome.status === 'skipped'
+            ? `已存在，未覆盖: ${outcome.path}`
+            : `${outcome.path}${outcome.detail ? `（${outcome.detail}）` : ''}`;
+      process.stdout.write(`  ${outcome.agent}: ${label}\n`);
+    }
   }
 
   const notes = [

@@ -48,39 +48,27 @@ npx -y @michael_py001/zendao-mcp doctor             # 检查安装状态
 
 Node.js ≥ 18：`npm install && npm run build`，复制 `.env.example` 为 `.env` 填凭证，`npm run verify` 自检。
 
-## 安装 Skill（可选，推荐）
+## Skill（随 init 自动安装）
 
-MCP 工具连上后 agent 能自动发现工具，但**工作流和铁律**（填日志前出清单确认、`dryRun` 不是确认、实例踩坑）需要一份 Skill 才能可靠传递。包里已随附 `skills/zendao-mcp/SKILL.md`。
+MCP 工具连上后 agent 能自动发现工具，但**工作流和铁律**（填日志前出清单确认、`dryRun` 不是确认、实例踩坑）需要一份 Skill 才能可靠传递。
 
-**方式一：从 npm 包解出**（安装后）
+`init` 在写 MCP 配置的**同时**，把 Skill 自动装到选中 agent 的 skills 目录，无需手动操作。已存在则跳过、不覆盖你改过的内容；`--dry-run` 只打印计划不写文件。结果里会单列 `Skill:` 段，显示每个 agent 的安装路径。
 
-```bash
-# 在任意空目录执行，解出 skill 文件
-npm pack @michael_py001/zendao-mcp          # 得到 tarball
-tar -xzf michael_py001-zendao-mcp-1.3.1.tgz  # Windows 自带 tar 亦可
-# 文件在 package/skills/zendao-mcp/SKILL.md
-```
+自动安装的 agent（有公开可靠的 skills 路径）：Claude Code、Cursor、Codex、OpenCode、Gemini CLI、VS Code / Copilot、Antigravity、Cherry Studio、WorkBuddy。其余只提供手工配置的 agent 不会被装 Skill。
 
-**方式二：从源码复制**（clone 了仓库时）
+**手工补装**（上面名单之外的 agent，或想覆盖已装的）：
 
 ```bash
-cp -r skills/zendao-mcp <agent 的 skills 目录>/
+# 从 npm 包解出（在任意空目录执行）
+npm pack @michael_py001/zendao-mcp
+tar -xzf michael_py001-zendao-mcp-1.3.1.tgz    # Windows 自带 tar 亦可
+# 把 package/skills/zendao-mcp/ 整个目录复制到该 agent 的 skills 目录下
+# clone 了仓库时，直接复制仓库里的 skills/zendao-mcp/ 即可
 ```
 
-**各 agent 的 skills 目录**（复制到此目录下，最终形如 `<目录>/zendao-mcp/SKILL.md`）：
+常见 skills 目录：Claude Code `~/.claude/skills/`、Cursor `~/.cursor/skills/`、Codex `~/.agents/skills/`、OpenCode `~/.config/opencode/skills/`、Gemini CLI `~/.gemini/skills/`、WorkBuddy `~/.workbuddy/skills/`（项目级用工作区 `.workbuddy/skills/`）。
 
-| Agent | 目录 |
-| --- | --- |
-| Claude Code | `~/.claude/skills/` |
-| Cursor | `~/.cursor/skills/` |
-| Codex | `~/.agents/skills/` |
-| OpenCode | `~/.config/opencode/skills/` |
-| Gemini CLI | `~/.gemini/skills/` |
-| Cherry Studio | `~/.cherrystudio/skills/` |
-| VS Code (Copilot) | `~/.copilot/skills/` |
-| Antigravity | `~/.gemini/antigravity/skills/` |
-
-装好后 agent 会在相关任务（操作禅道数据、查我的待办、填工时、读附件）时自动加载它。WorkBuddy 用户把 `SKILL.md` 放进工作区 `.workbuddy/skills/zendao-mcp/` 即可。
+装好后 agent 会在相关任务（操作禅道数据、查我的待办、填工时、读附件）时自动加载它。
 
 ## 能做什么
 
@@ -108,7 +96,8 @@ cp -r skills/zendao-mcp <agent 的 skills 目录>/
 
 | 版本 | 更新内容 |
 | --- | --- |
-| **1.3.1** | 随包附送 `skills/zendao-mcp/SKILL.md`（Agent 工具选择、写操作铁律、实例踩坑） |
+| **1.3.2** | `init` 时自动把 Skill 装到各 agent 的 skills 目录（已存在不覆盖，`--dry-run` 可预览） |
+| 1.3.1 | 随包附送 `skills/zendao-mcp/SKILL.md`（Agent 工具选择、写操作铁律、实例踩坑） |
 | 1.3.0 | 升级 `zentao-api` 至 0.9.3：官方动作 229 → 365、模块 26 → 43；新增 `zendao_link`（页面链接生成/解析）和 `zendao_read_attachment`（从 URL / HTML / fileID 读取任意对象附件），工具总数 16 个 |
 | 1.2.0 | 配置形态改为 `mcp` 子命令 + 凭证明文写入各 agent 的 `env`；`serve` 保留为兼容别名 |
 | 1.1.0 | 安装器支持 82 个 agent（25 个自动写入 + 57 个手工指引），写配置时保留 JSONC 注释与尾随逗号 |
