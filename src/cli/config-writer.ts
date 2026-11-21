@@ -4,14 +4,32 @@
  * 三条底线：
  * 1. 只动自己那个键，绝不整体重写 —— ~/.claude.json 里还有登录态；
  * 2. 写前备份、同目录临时文件原子替换 —— 配置文件写坏了 agent 会静默失效；
- * 3. JSON 解析失败就报错退出，不做正则瞎改 —— JSONC 注释没法安全保留。
+ * 3. 用 jsonc-parser 做保留注释的定点修改 —— Trae / CodeBuddy / Cline
+ *    的配置允许注释和尾随逗号，JSON.stringify 整表重写会把它们全毁掉。
  */
 
 import * as fs from 'fs';
 import * as path from 'path';
-import { AgentDef, ConfigFormat, Scope, SERVER_NAME, configFormat, serverEntry } from './agents';
+import {
+  ParseError,
+  applyEdits,
+  modify,
+  parse as parseJsonc,
+  printParseErrorCode,
+} from 'jsonc-parser';
+import {
+  AgentDef,
+  ConfigFormat,
+  ManualAgent,
+  Scope,
+  SERVER_NAME,
+  configFormat,
+  manualInstruction,
+  rootKey,
+  serverEntry,
+} from './agents';
 
-export type WriteStatus = 'created' | 'updated' | 'unchanged' | 'failed';
+export type WriteStatus = 'created' | 'updated' | 'unchanged' | 'failed' | 'manual';
 
 export interface WriteOutcome {
   agent: string;
@@ -32,18 +50,20 @@ function readText(filePath: string): string | null {
 }
 
 function parseJson(text: string, filePath: string): Record<string, any> {
-  try {
-    const parsed = JSON.parse(text);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-      throw new Error('顶层不是 JSON 对象');
-    }
-    return parsed as Record<string, any>;
-  } catch (error: any) {
-    const hint = /\/\/|\/\*/.test(text)
-      ? '这个文件带注释（JSONC），标准 JSON 解析器无法安全保留注释；请先在编辑器里去掉注释后重试，或用 agent 自带界面添加'
-      : '文件内容不是合法 JSON';
-    throw new ConfigWriteError(`${hint}（${error.message}）`, filePath);
+  const errors: ParseError[] = [];
+  const parsed = parseJsonc(text, errors, { allowTrailingComma: true });
+  if (errors.length) {
+    const first = errors[0];
+    throw new ConfigWriteError(
+      `文件内容不是合法 JSON/JSONC（${printParseErrorCode(first.error)}，偏移 ${first.offset}）`,
+      filePath
+    );
   }
+  if (parsed === undefined && !text.trim()) return {};
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+    throw new ConfigWriteError('顶层不是 JSON 对象', filePath);
+  }
+  return parsed as Record<string, any>;
 }
 
 function commit(filePath: string, text: string, dryRun: boolean): void {
@@ -77,12 +97,21 @@ function writeJson(
 
   if (JSON.stringify(before) === JSON.stringify(entry)) return 'unchanged';
 
-  const next = { ...(servers && typeof servers === 'object' && !Array.isArray(servers) ? servers : {}) };
-  next[SERVER_NAME] = entry;
-  data[rootKey] = next;
+  if (text === null) {
+    commit(filePath, `${JSON.stringify({ [rootKey]: { [SERVER_NAME]: entry } }, null, 2)}\n`, dryRun);
+    return 'created';
+  }
 
-  commit(filePath, `${JSON.stringify(data, null, 2)}\n`, dryRun);
-  return text === null ? 'created' : 'updated';
+  // 定点修改：保留原有注释、尾随逗号、缩进风格和其他人的配置
+  const edits = modify(text, [rootKey, SERVER_NAME], entry, {
+    formattingOptions: {
+      tabSize: 2,
+      insertSpaces: true,
+      eol: text.includes('\r\n') ? '\r\n' : '\n',
+    },
+  });
+  commit(filePath, applyEdits(text, edits), dryRun);
+  return 'updated';
 }
 
 /**
@@ -128,24 +157,37 @@ export function hasEntry(agent: AgentDef, scope: Scope, cwd: string): boolean {
   const format: ConfigFormat = configFormat(agent);
   if (format === 'toml') return /^\[mcp_servers\.zendao\]\s*$/m.test(text);
   const data = parseJson(text, filePath);
-  const root = data[format === 'servers' ? 'servers' : format === 'mcp' ? 'mcp' : 'mcpServers'];
+  const root = data[rootKey(format)];
   return !!(root && typeof root === 'object' && root[SERVER_NAME]);
 }
 
+/**
+ * 自动写入类与手工指引类走同一个出口，调用方不必再分支。
+ * 手工类返回 status='manual'，不算失败，但也不会碰任何文件。
+ */
 export function writeAgentConfig(
-  agent: AgentDef,
+  agent: AgentDef | ManualAgent,
   scope: Scope,
   cwd: string,
   dryRun: boolean
 ): WriteOutcome {
+  if (!('configPath' in agent)) {
+    return {
+      agent: agent.name,
+      path: '(手工配置)',
+      status: 'manual',
+      detail: manualInstruction(agent.name),
+    };
+  }
+
   const filePath = agent.configPath(scope, cwd);
   try {
     const format = configFormat(agent);
-    const entry = serverEntry(format);
+    const entry = serverEntry(format, agent.entryExtra);
     const status =
       format === 'toml'
         ? writeToml(filePath, entry, dryRun)
-        : writeJson(filePath, format, entry, dryRun);
+        : writeJson(filePath, rootKey(format), entry, dryRun);
     return { agent: agent.name, path: filePath, status };
   } catch (error: any) {
     return { agent: agent.name, path: filePath, status: 'failed', detail: error.message };

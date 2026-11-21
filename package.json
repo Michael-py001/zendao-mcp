@@ -1,6 +1,6 @@
 {
   "name": "@michael_py001/zendao-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "MCP 服务器，用于让 LLM 操作禅道项目管理系统的 API；自带一键安装到多种 AI agent 的 CLI",
   "main": "dist/index.js",
   "bin": {
@@ -68,6 +68,7 @@
     "@modelcontextprotocol/sdk": "^1.0.0",
     "axios": "^1.6.0",
     "dotenv": "^16.3.0",
+    "jsonc-parser": "^3.3.1",
     "zentao-api": "^0.7.0",
     "zod": "^3.22.0"
   },

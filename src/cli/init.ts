@@ -3,7 +3,17 @@
  * 交互模型参考 skills CLI：自动检测 → 多选 → 汇总确认 → 可选 -a/-y 全非交互。
  */
 
-import { AGENTS, AgentDef, PACKAGE_NAME, Scope, detectInstalled, SERVER_NAME } from './agents';
+import {
+  AGENTS,
+  AgentDef,
+  MANUAL_AGENTS,
+  ManualAgent,
+  PACKAGE_NAME,
+  Scope,
+  START_COMMAND,
+  detectInstalled,
+  SERVER_NAME,
+} from './agents';
 import { hasEntry, writeAgentConfig, WriteOutcome } from './config-writer';
 import { Credentials, credentialsPath, loadCredentials, saveCredentials } from './credentials';
 import { askSecret, askText, confirm, selectMany } from './prompt';
@@ -14,13 +24,14 @@ export interface InitOptions {
   yes: boolean;
   scope: Scope;
   agentIds?: string[];
+  listAgents?: boolean;
 }
 
 const HELP = `用法: npx -y ${PACKAGE_NAME} init [选项]
 
 选项:
-  -a, --agent <id>   指定 agent，可重复（claude-code, cursor, codex, opencode,
-                     gemini-cli, vscode, windsurf, workbuddy, claude-desktop）
+  -a, --agent <id>   指定 agent，可重复；显式指定时也接受仅支持手工配置的 agent
+      --list-agents  列出全部 agent ID（自动配置 / 手工配置）
   -g, --global       用户级配置（默认）
   -p, --project      项目级配置
   -y, --yes          跳过确认
@@ -38,6 +49,7 @@ export function parseInitArgs(args: string[], cwd = process.cwd()): InitOptions 
     } else if (arg === '-g' || arg === '--global') options.scope = 'global';
     else if (arg === '-p' || arg === '--project') options.scope = 'project';
     else if (arg === '-y' || arg === '--yes') options.yes = true;
+    else if (arg === '--list-agents') options.listAgents = true;
     else if (arg === '--dry-run') options.dryRun = true;
     else if (arg === '-h' || arg === '--help') {
       process.stdout.write(HELP);
@@ -68,19 +80,54 @@ async function collectCredentials(dryRun: boolean): Promise<Credentials> {
   return { baseUrl, account, password };
 }
 
+export function listAgents(): void {
+  process.stdout.write(`\n可自动写入配置（${AGENTS.length} 个）:\n`);
+  for (const agent of AGENTS) {
+    process.stdout.write(`  ${agent.id.padEnd(18)} ${agent.name}\n`);
+  }
+  process.stdout.write(`\n仅支持手工配置（${MANUAL_AGENTS.length} 个，-a <id> 选中后给出启动命令）:\n`);
+  for (const agent of MANUAL_AGENTS) {
+    process.stdout.write(`  ${agent.id.padEnd(18)} ${agent.name}\n`);
+  }
+  process.stdout.write(`\n手工配置的通用命令: ${START_COMMAND}\n`);
+}
+
+function resolveAgentIds(ids: string[], scope: Scope): Array<AgentDef | ManualAgent> {
+  const result: Array<AgentDef | ManualAgent> = [];
+  for (const id of ids) {
+    const available = AGENTS.find((a) => a.id === id);
+    if (available) {
+      if (!available.scopes.includes(scope)) {
+        throw new Error(`${available.name} 不支持当前作用域 ${scope}，请改用 -g / --global`);
+      }
+      result.push(available);
+      continue;
+    }
+    const manual = MANUAL_AGENTS.find((a) => a.id === id);
+    if (manual) {
+      result.push(manual);
+      continue;
+    }
+    throw new Error(`未知的 agent: ${id}（用 --list-agents 查看全部 ID）`);
+  }
+  return result;
+}
+
 export async function runInit(options: InitOptions): Promise<number> {
+  if (options.listAgents) {
+    listAgents();
+    return 0;
+  }
+
   process.stdout.write(`\nzendao-mcp init${options.dryRun ? '（dry-run，不会写文件）' : ''}\n\n`);
 
   const installed = detectInstalled(options.cwd, options.scope);
   process.stdout.write(`检测到的 agent: ${installed.length ? installed.map((a) => a.name).join('、') : '无'}\n\n`);
 
   const available = AGENTS.filter((a) => a.scopes.includes(options.scope));
-  let selected: AgentDef[];
+  let selected: Array<AgentDef | ManualAgent>;
   if (options.agentIds) {
-    const picked = options.agentIds.map((id) => available.find((a) => a.id === id));
-    const missing = options.agentIds.filter((_, i) => !picked[i]);
-    if (missing.length) throw new Error(`未知的 agent: ${missing.join(', ')}`);
-    selected = picked as AgentDef[];
+    selected = resolveAgentIds(options.agentIds, options.scope);
   } else if (options.dryRun || options.yes) {
     selected = installed;
   } else {
@@ -102,9 +149,22 @@ export async function runInit(options: InitOptions): Promise<number> {
   process.stdout.write('\n安装计划:\n');
   process.stdout.write(`  凭证: ${credFile}（权限 600，不写进 agent 配置）\n`);
   for (const agent of selected) {
+    if (!('configPath' in agent)) {
+      process.stdout.write(`  ${agent.name}: 手工配置（不会写文件）\n`);
+      continue;
+    }
     const file = agent.configPath(options.scope, options.cwd);
-    const exists = hasEntry(agent, options.scope, options.cwd);
-    process.stdout.write(`  ${agent.name}: ${file}${exists ? '（已存在，将更新）' : ''}\n`);
+    let exists = false;
+    let planError = '';
+    try {
+      exists = hasEntry(agent, options.scope, options.cwd);
+    } catch (error: any) {
+      // 单个配置文件坏了不能中断整批安装；真正写入时该 agent 会记为 failed
+      planError = `（读取失败：${error.message}）`;
+    }
+    process.stdout.write(
+      `  ${agent.name}: ${file}${exists ? '（已存在，将更新）' : ''}${planError}\n`
+    );
   }
 
   if (!options.yes && !options.dryRun && !(await confirm('\n确认写入?'))) {
@@ -123,14 +183,28 @@ export async function runInit(options: InitOptions): Promise<number> {
 
   process.stdout.write('\n结果:\n');
   for (const outcome of outcomes) {
-    const label = outcome.status === 'failed' ? `失败: ${outcome.detail}` : outcome.status;
+    const label =
+      outcome.status === 'failed'
+        ? `失败: ${outcome.detail}`
+        : outcome.status === 'manual'
+          ? `手工配置: ${outcome.detail}`
+          : outcome.status;
     process.stdout.write(`  ${outcome.agent}: ${label}\n`);
   }
 
-  const notes = [...new Set(selected.map((a) => a.note).filter((n): n is string => !!n))];
+  const notes = [
+    ...new Set(
+      selected
+        .filter((a): a is AgentDef => 'note' in a)
+        .map((a) => a.note)
+        .filter((n): n is string => !!n)
+    ),
+  ];
   if (notes.length) process.stdout.write(`\n注意:\n${notes.map((n) => `  - ${n}`).join('\n')}\n`);
-  process.stdout.write(`\n重启对应 agent 后，工具列表里应出现 ${SERVER_NAME} 的工具。\n`);
-  process.stdout.write('可用 doctor 检查配置是否写入成功；首次发布前 npx 会拉不到包，先用本地构建验证。\n');
+  if (outcomes.some((o) => o.status !== 'manual')) {
+    process.stdout.write(`\n重启对应 agent 后，工具列表里应出现 ${SERVER_NAME} 的工具。\n`);
+    process.stdout.write('可用 doctor 检查配置是否写入成功。\n');
+  }
 
   return outcomes.some((o) => o.status === 'failed') ? 1 : 0;
 }

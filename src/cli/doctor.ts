@@ -2,7 +2,7 @@
  * `zendao-mcp doctor` —— 只做本地静态检查，不发网络请求、不改文件。
  */
 
-import { AGENTS, Scope } from './agents';
+import { AGENTS, Scope, detectInstalled } from './agents';
 import { hasEntry } from './config-writer';
 import { credentialsPath, loadCredentials } from './credentials';
 
@@ -18,8 +18,11 @@ export function runDoctor(options: DoctorOptions): number {
     process.stdout.write('  提示: 先运行 init，或在 ~/.zendao-mcp/.env 里填好禅道地址与凭证\n');
   }
 
-  for (const agent of AGENTS) {
-    if (!agent.scopes.includes(options.scope)) continue;
+  const candidates = AGENTS.filter((a) => a.scopes.includes(options.scope));
+  const detected = detectInstalled(options.cwd, options.scope);
+  let configured = 0;
+
+  for (const agent of candidates) {
     const file = agent.configPath(options.scope, options.cwd);
     let installed: boolean;
     try {
@@ -28,7 +31,11 @@ export function runDoctor(options: DoctorOptions): number {
       process.stdout.write(`${agent.name}: 配置解析失败 — ${error.message}\n`);
       continue;
     }
+    if (installed) configured++;
+    // 只显示已配置的，或本机确实装了的 agent —— 25 个全列出来噪音太大
+    if (!installed && !detected.includes(agent)) continue;
     process.stdout.write(`${agent.name}: ${installed ? `已配置 (${file})` : `未配置 (${file})`}\n`);
   }
+  process.stdout.write(`检查了 ${candidates.length} 个 agent，已配置 ${configured} 个。\n`);
   return 0;
 }

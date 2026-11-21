@@ -7,7 +7,7 @@
 - **API 版本**：禅道 API 2.0（`/api.php/v2`），可配置回落 v1
 - **技术栈**：TypeScript + `@modelcontextprotocol/sdk` + `zod` + `axios` + `zentao-api`（官方动作注册表）
 - **认证方式**：账号密码自动换取 REST Token，401 自动重换
-- **工具数**：12 个（**通用层 3**：`modules` / `help` / `call`，覆盖官方 26 模块 × 229 个动作；**手写兜底 9**：官方给不了的实例特有能力）
+- **工具数**：14 个（**通用层 3**：`modules` / `help` / `call`，覆盖官方 26 模块 × 229 个动作；**手写兜底 11**：官方给不了的实例特有能力）
 
 ---
 
@@ -21,23 +21,38 @@ npx -y @michael_py001/zendao-mcp init
 
 交互流程参考 `npx skills`：
 
-1. 按配置文件自动检测本机已装的 agent（WorkBuddy / Claude Code / Claude Desktop / Cursor / Codex / OpenCode / Gemini CLI / VS Code / Windsurf）；
+1. 按配置文件自动检测本机已装的 agent；
 2. 空格多选目标 agent（`a` 全选、`u` 全清、↑↓ 移动），再选用户级 / 项目级；
 3. 交互式填写禅道站点地址、账号、密码（密码不回显）；
 4. 汇总确认后，凭证写入 `~/.zendao-mcp/.env`（权限 600），各 agent 配置只新增一个 `zendao` 条目。
 
 **凭证不会写进 agent 配置文件** —— 那些文件常被提交到 git，也可能被别的工具读取。
-写入前自动备份、同目录原子替换；遇到带注释的 JSONC 直接报错退出，不做有损改写。
+写入前自动备份、同目录原子替换；用 `jsonc-parser` 定点插入，Trae / CodeBuddy / Cline 常见的
+JSONC 注释与尾随逗号会原样保留，只损坏到真正非法的配置文件才会报错退出。
+
+**可自动写入配置的 25 个 agent**：WorkBuddy、Claude Code、Claude Desktop、Cursor、Codex CLI、
+OpenCode、Gemini CLI、VS Code / Copilot、Windsurf、Cline、Roo Code、Kilo Code、Zed、
+GitHub Copilot CLI、Kiro CLI、Continue、Qwen Code、Antigravity、Trae、CodeBuddy、
+Droid (Factory)、Augment Code、Qoder、Devin CLI、Amp。
+
+另外对齐 [skills CLI 的 agent 名单](https://github.com/vercel-labs/skills/blob/main/docs/agents.md)，
+支持 57 个仅手工配置的 agent（Goose、Warp、OpenHands、Lingma/通义灵码、Qoder CN、Trae CN、
+Junie、iFlow CLI 等）——它们只公开了 skills 目录、没有可靠的 MCP 配置格式，
+`-a <id>` 选中后会打印可直接复制的启动命令，**不会猜路径写文件**。
+完整 ID 清单用 `--list-agents` 查看。
 
 非交互 / CI 用法：
 
 ```bash
+npx -y @michael_py001/zendao-mcp init --list-agents  # 全部 agent ID
 npx -y @michael_py001/zendao-mcp init -a claude-code -a cursor -y
-npx -y @michael_py001/zendao-mcp init --dry-run      # 只看计划，不写文件
-npx -y @michael_py001/zendao-mcp doctor              # 检查安装状态
+npx -y @michael_py001/zendao-mcp init -a goose -y             # 手工配置指引
+npx -y @michael_py001/zendao-mcp init --dry-run               # 只看计划，不写文件
+npx -y @michael_py001/zendao-mcp doctor                       # 检查安装状态
 ```
 
 写入 agent 配置的启动命令是 `npx -y @michael_py001/zendao-mcp serve`。
+各宿主的根键不同（`mcpServers` / `servers` / `mcp` / `context_servers` / TOML），安装器会自动选。
 WorkBuddy 额外需要在连接器中心右上角点「信任」才会加载自定义 MCP。
 
 本地开发（未发布时）用 `npm run build && node dist/cli.js init`，效果相同。

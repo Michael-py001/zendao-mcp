@@ -5,6 +5,7 @@
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
+import { parse as parseJsonc } from 'jsonc-parser';
 import { AgentDef, PACKAGE_NAME, SERVER_NAME } from '../../src/cli/agents';
 import { hasEntry, writeAgentConfig } from '../../src/cli/config-writer';
 
@@ -59,13 +60,38 @@ describe('writeAgentConfig / JSON', () => {
     expect(fs.readdirSync(dir)).toHaveLength(0);
   });
 
-  it('JSONC 注释直接失败，不做有损改写', () => {
+  it('JSONC 注释原样保留，定点插入条目', () => {
     const file = path.join(dir, 'commented.json');
-    fs.writeFileSync(file, '{\n  // 这是注释\n  "mcpServers": {}\n}\n');
+    fs.writeFileSync(file, '{\n  // 这是注释\n  "mcpServers": {\n    "other": { "command": "uvx" }\n  }\n}\n');
     const outcome = writeAgentConfig(jsonAgent('commented.json'), 'global', dir, false);
+    expect(outcome.status).toBe('updated');
+    const text = fs.readFileSync(file, 'utf8');
+    expect(text).toContain('// 这是注释');
+    const data = parseJsonc(text);
+    expect(data.mcpServers.other.command).toBe('uvx');
+    expect(data.mcpServers.zendao.command).toBe('npx');
+  });
+
+  it('尾随逗号保留，且不破坏其他人的配置', () => {
+    const file = path.join(dir, 'trailing.json');
+    fs.writeFileSync(
+      file,
+      '{\n  "mcpServers": {\n    "old": { "url": "https://example.com" },\n  },\n}\n'
+    );
+    expect(writeAgentConfig(jsonAgent('trailing.json'), 'global', dir, false).status).toBe('updated');
+    const text = fs.readFileSync(file, 'utf8');
+    expect(text).toMatch(/},\n\s*"zendao":/); // 原有条目后的尾随逗号仍在
+    const data = parseJsonc(text, [], { allowTrailingComma: true });
+    expect(data.mcpServers.old.url).toBe('https://example.com');
+    expect(data.mcpServers.zendao.args).toEqual(['-y', PACKAGE_NAME, 'serve']);
+  });
+
+  it('真正损坏的 JSON 仍报错退出', () => {
+    const file = path.join(dir, 'broken.json');
+    fs.writeFileSync(file, '{ "mcpServers": { oops\n');
+    const outcome = writeAgentConfig(jsonAgent('broken.json'), 'global', dir, false);
     expect(outcome.status).toBe('failed');
-    expect(outcome.detail).toContain('JSONC');
-    expect(fs.readFileSync(file, 'utf8')).toContain('// 这是注释');
+    expect(outcome.detail).toContain('合法 JSON/JSONC');
   });
 
   it('VS Code 用 servers + type stdio；OpenCode 用 mcp + 数组命令', () => {
