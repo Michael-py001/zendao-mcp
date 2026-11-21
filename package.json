@@ -12,6 +12,7 @@
     "MCP-SETUP.md",
     "MCP_TESTING_GUIDE.md",
     "docs",
+    "!docs/effort-*",
     ".env.example"
   ],
   "engines": {
