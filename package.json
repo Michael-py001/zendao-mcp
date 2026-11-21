@@ -13,6 +13,7 @@
     "MCP_TESTING_GUIDE.md",
     "docs",
     "!docs/effort-*",
+    "skills",
     ".env.example"
   ],
   "engines": {
