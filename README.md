@@ -113,4 +113,4 @@ tar -xzf michael_py001-zendao-mcp-1.3.1.tgz    # Windows 自带 tar 亦可
 
 ## 安全与许可
 
-不要提交 `.env`（已在 `.gitignore`）。许可：ISC。
+不要提交 `.env`（已在 `.gitignore`）。许可：[MIT](./LICENSE)。

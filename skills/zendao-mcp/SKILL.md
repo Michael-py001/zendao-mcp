@@ -4,7 +4,7 @@ display_name: 禅道 MCP
 description: 通过 zendao-mcp 的 MCP 工具查询和维护禅道（ZenTao）的产品、需求、任务、Bug、工时、页面链接与附件。当用户要求操作禅道数据、查我的待办/任务/Bug、填报工时、生成禅道页面链接或读取附件时使用；安装/接入问题参见 MCP-SETUP.md。
 description_zh: 让 AI 客户端通过 MCP 读写禅道的项目、任务、Bug 和工时。擅长「我的地盘」类查询、跨产品 Bug 汇总、通用动作兜底，以及本实例特有的附件与工时通路。
 description_en: MCP tools to query and maintain ZenTao products, stories, tasks, bugs, efforts, page links and attachments. Use for ZenTao data operations, "my work" queries, effort logging and attachment reads.
-license: ISC
+license: MIT
 version: 1.3.0
 metadata:
   repository: https://github.com/Michael-py001/zendao-mcp
