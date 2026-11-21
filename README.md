@@ -16,7 +16,7 @@
 发布到 npm 后，在**自己的电脑上**执行（不需要 clone 仓库、不需要先装依赖）：
 
 ```bash
-npx -y @michael-py001/zendao-mcp init
+npx -y @michael_py001/zendao-mcp init
 ```
 
 交互流程参考 `npx skills`：
@@ -32,12 +32,12 @@ npx -y @michael-py001/zendao-mcp init
 非交互 / CI 用法：
 
 ```bash
-npx -y @michael-py001/zendao-mcp init -a claude-code -a cursor -y
-npx -y @michael-py001/zendao-mcp init --dry-run      # 只看计划，不写文件
-npx -y @michael-py001/zendao-mcp doctor              # 检查安装状态
+npx -y @michael_py001/zendao-mcp init -a claude-code -a cursor -y
+npx -y @michael_py001/zendao-mcp init --dry-run      # 只看计划，不写文件
+npx -y @michael_py001/zendao-mcp doctor              # 检查安装状态
 ```
 
-写入 agent 配置的启动命令是 `npx -y @michael-py001/zendao-mcp serve`。
+写入 agent 配置的启动命令是 `npx -y @michael_py001/zendao-mcp serve`。
 WorkBuddy 额外需要在连接器中心右上角点「信任」才会加载自定义 MCP。
 
 本地开发（未发布时）用 `npm run build && node dist/cli.js init`，效果相同。

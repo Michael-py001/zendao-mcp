@@ -11,9 +11,9 @@ import { runDoctor } from './doctor';
 const HELP = (version: string) => `zendao-mcp ${version}
 
 用法:
-  npx -y @michael-py001/zendao-mcp init    交互式安装到本机 AI agent
-  npx -y @michael-py001/zendao-mcp doctor  检查安装状态
-  npx -y @michael-py001/zendao-mcp serve   启动 MCP 服务（agent 配置里用的就是这条）
+  npx -y @michael_py001/zendao-mcp init    交互式安装到本机 AI agent
+  npx -y @michael_py001/zendao-mcp doctor  检查安装状态
+  npx -y @michael_py001/zendao-mcp serve   启动 MCP 服务（agent 配置里用的就是这条）
 
 init --help 查看安装选项。
 `;

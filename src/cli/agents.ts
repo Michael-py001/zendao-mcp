@@ -11,7 +11,7 @@ import * as os from 'os';
 import * as path from 'path';
 
 /** 发布到 npm 的包名，也是写进各 agent 配置的入口 */
-export const PACKAGE_NAME = '@michael-py001/zendao-mcp';
+export const PACKAGE_NAME = '@michael_py001/zendao-mcp';
 /** 在各 agent 配置里注册的名字 */
 export const SERVER_NAME = 'zendao';
 
